@@ -2,6 +2,7 @@ node{
     echo "jenkins url is {$env.JENKINS_URL}"
 def mavenHome = tool name: "maven3.8.6"
 properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')), pipelineTriggers([pollSCM('* * * * *')])])
+try{
 stage('CheckOutCode'){
 git branch: 'development', credentialsId: 'b8a95925-b69d-4f50-90ae-5184df7834fe', url: 'https://github.com/kunalsingh5599/maven-web-application.git'
 }
@@ -17,6 +18,15 @@ sh "${mavenHome}/bin/mvn deploy"
 stage('UploadArtifactstoTomcat'){
 sshagent(['35f61178-edff-409d-b23b-fe1c81333345']) {
 sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@172.31.32.9:/opt/apache-tomcat-9.0.65/webapps/"
+}
+}
+}
+catch (e){
+    throw e
+    slackNotifications(currentBuild.result)
+}
+Finally{
+    slackNotifications(currentBuild.result)
 }
 }
 def slackNotifications(String buildStatus = 'STARTED') {
@@ -43,6 +53,4 @@ def slackNotifications(String buildStatus = 'STARTED') {
 
   // Send notifications
   slackSend (color: colorCode, message: summary)
-}
-
 }
